@@ -159,7 +159,7 @@ a{color:var(--salmon)}
       <div class="inner">
         <span class="badge">All Levels | 5x/Week | Hypertrophy</span>
         <h1>SWOLE</h1>
-        <div class="author">Hypertrophy - inspired by Jeff Nippard</div>
+        <div class="author">Hypertrophy</div>
       </div>
     </div>
     <div class="wrap" id="todayBody"></div>
@@ -185,10 +185,10 @@ a{color:var(--salmon)}
 <div class="toast" id="toast"></div>
 <script>window.__HERO__='1-swole-hero.jpg';</script>
 <script>
-// ===== POWERBUILDING SYSTEM - PROGRAM DATA (transcribed from Jeff Nippard's Powerbuilding System PDF) =====
+// ===== SWOLE - PROGRAM DATA (original Forge program) =====
 // Exercise schema: n=name, w=warmup sets, s=working sets, r=reps, p=%1RM string, rpe, rest, note,
 // l=1RM lift key (squat/bench/deadlift/ohp), top=top set flag, opt=optional, vars=[{label,v,note}], v=video key, sup=superset/circuit label
-// Form demo videos (Jeff Nippard)
+// Form demo videos
 const V = {
   'ASSISTED PULL-UP':{u:'https://youtu.be/iZQNHZuvfUQ?si=HbK5zxsfGHiDqYPT',t:'Assisted Pull-Up'},
   'BAYESIAN CABLE CURL':{u:'https://youtu.be/CWH5J_7kzjM?si=BNJ2VJlL7mIVMPtI',t:'Bayesian Cable Curl'},
@@ -4143,12 +4143,8 @@ function renderGuide(){
 // --- MORE (author + settings) ---
 function renderMore(){
   const el=document.getElementById('moreBody');
-  let h='<div class="pagetop" style="padding:0 0 4px"><h2>The Coach</h2><span class="sub">About the author</span></div>';
-  h+='<div class="quote">SWOLE is an original program, heavily inspired by Jeff Nippard\'s Pure Bodybuilding program.</div>';
-  h+='<div class="card"><img class="authorimg" id="authorImg" alt="Jeff Nippard"><h3 style="margin:12px 0 4px;font-size:20px">Jeff Nippard</h3><p class="small" style="font-size:14px;color:#d5d1c9">Professional drug-free bodybuilder and powerlifter. Mr. Junior Canada (natural bodybuilding, 2012), Canadian national record holder in the bench press (2014), with a 502 lb squat, 336 lb bench, 518 lb deadlift and an all-time best Wilks of 446. BSc in biochemistry; has coached national and pro natural bodybuilders and IPF Worlds-qualified raw powerlifters, and presented seminars on block periodization and concurrent training. He lives in Ontario, Canada, making science-based training content.</p>';
-  h+='<a class="linkbtn" href="https://jeffnippard.com" target="_blank" rel="noopener">jeffnippard.com <span>programs + coaching</span></a>';
-  h+='<a class="linkbtn" href="https://www.youtube.com/@JeffNippard" target="_blank" rel="noopener">YouTube <span>@JeffNippard</span></a>';
-  h+='<a class="linkbtn" href="https://www.instagram.com/jeffnippard" target="_blank" rel="noopener">Instagram <span>@jeffnippard</span></a>';
+  let h='<div class="pagetop" style="padding:0 0 4px"><h2>The Program</h2><span class="sub">About the program</span></div>';
+  h+='<div class="quote">SWOLE is an original Forge program.</div>';
   h+='<div class="divider"></div><div class="kicker">Emphasized coaching points</div>';
   h+='<div class="quote">"How you lift is always more important than how much you lift."</div>';
   h+='<div class="quote">"Recovery management is a top priority on a hybrid program - autoregulate honestly and respect the RPEs."</div>';
@@ -4167,7 +4163,6 @@ function renderMore(){
   h+='<div class="divider"></div><button class="btn ghost" style="color:#e08a8d;border-color:#4a2628" onclick="resetAll()">Reset everything</button></div>';
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
-  const ai=document.getElementById('authorImg');if(ai)ai.src=window.__JEFF__;
 }
 function setUnit(u){state.set.unit=u;save();renderAll();}
 function setW10(v){state.set.w10=v;const s=seq();if(state.pos>=s.length)state.pos=s.length-1;save();renderAll();}
