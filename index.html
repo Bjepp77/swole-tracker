@@ -10,7 +10,7 @@
 <style>
 :root{
   --bg:#141414; --bg2:#1c1c1e; --card:#202022; --card2:#262628;
-  --red:#a01a1e; --red-hi:#c8262b; --salmon:#e4c5b8; --grey:#4d4d4f;
+  --red:#7a3fb0; --red-hi:#c86bff; --salmon:#e9d4ff; --grey:#4d4d4f;
   --txt:#f2f0ec; --muted:#9b9890; --line:#333336;
   --disp:'Oswald','Arial Narrow Bold','Helvetica Neue',Impact,sans-serif;
   --body:'Barlow','Helvetica Neue',Arial,sans-serif;
@@ -4116,23 +4116,23 @@ function chartSVG(name){
   const x=i=>P+i*(W-2*P)/(pts.length-1);
   const y=v=>H-P-(v-min)*(H-2*P)/span;
   const line=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(p.e).toFixed(1)).join(' ');
-  let dots=pts.map((p,i)=>'<circle cx="'+x(i)+'" cy="'+y(p.e)+'" r="4" fill="#e4c5b8"><title>'+esc(p.d)+': '+p.e+'</title></circle>').join('');
+  let dots=pts.map((p,i)=>'<circle cx="'+x(i)+'" cy="'+y(p.e)+'" r="4" fill="#e9d4ff"><title>'+esc(p.d)+': '+p.e+'</title></circle>').join('');
   return '<svg viewBox="0 0 '+W+' '+H+'"><line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="#333"/><line x1="'+P+'" y1="'+P+'" x2="'+P+'" y2="'+(H-P)+'" stroke="#333"/>'+
     '<text x="'+(P-6)+'" y="'+(y(max)+4)+'" fill="#9b9890" font-size="11" text-anchor="end">'+fmtW(max)+'</text>'+
     '<text x="'+(P-6)+'" y="'+(y(min)+4)+'" fill="#9b9890" font-size="11" text-anchor="end">'+fmtW(min)+'</text>'+
-    '<path d="'+line+'" fill="none" stroke="#c8262b" stroke-width="2.5"/>'+dots+'</svg>';
+    '<path d="'+line+'" fill="none" stroke="#c86bff" stroke-width="2.5"/>'+dots+'</svg>';
 }
 
 // --- GUIDE ---
 function renderGuide(){
   const el=document.getElementById('guideBody');
   let h='<div class="pagetop" style="padding:0 0 4px"><h2>Program Guide</h2><span class="sub">Condensed from the manual</span></div>';
-  h+='<div class="gsec"><h3>The Structure</h3><p>SWOLE runs 10 weeks of 5 full-body days per week, resting after Day 2 and Day 5:</p><ul><li><b>Block 1 - Weeks 1-5 (Build Phase).</b> The same 5 full-body days every week. Beat last week: tracking load and reps IS the progression.</li><li><b>Block 2 - Weeks 6-10 (Novelty Phase).</b> Fresh movements and new last-set intensity techniques to keep growth going.</li><li><b>Day 5</b> carries your weak-point slots - pick ONE lagging muscle from the Weak Point Table in the handbook and run its Exercise 1 (Exercise 2 only when recovered).</li><li><b>Rest days</b> are mandatory after Day 2 and Day 5. Full-body frequency only works when recovery does.</li></ul></div>';
+  h+='<div class="gsec"><h3>The Split</h3><p>SWOLE runs 10 weeks of 5 full-body days per week, resting after Day 2 and Day 5:</p><ul><li><b>Block 1 - Weeks 1-5 (Build Phase).</b> The same 5 full-body days every week. Beat last week: tracking load and reps IS the progression.</li><li><b>Block 2 - Weeks 6-10 (Novelty Phase).</b> Fresh movements and new last-set intensity techniques to keep growth going.</li><li><b>Day 5</b> carries your weak-point slots - pick ONE lagging muscle from the Weak Point Table in the handbook and run its Exercise 1 (Exercise 2 only when recovered).</li><li><b>Rest days</b> are mandatory after Day 2 and Day 5. Full-body frequency only works when recovery does.</li></ul></div>';
   h+='<div class="gsec"><h3>Autoregulation: RPE</h3><p>When an RPE is given, pick a weight that puts you at that RPE for the given reps. Adjust set to set based on how the weight actually moved.</p><table class="rpetable"><tr><td>10</td><td>Maximal effort - nothing left</td></tr><tr><td>9.5</td><td>No reps left, but could add load</td></tr><tr><td>9</td><td>1 rep in reserve</td></tr><tr><td>8.5</td><td>Definitely 1, maybe 2 reps in reserve</td></tr><tr><td>8</td><td>2 reps in reserve</td></tr><tr><td>7.5</td><td>Definitely 2, maybe 3 reps in reserve</td></tr><tr><td>7</td><td>3 reps in reserve</td></tr><tr><td>5-6</td><td>4-6 reps in reserve</td></tr></table></div>';
   h+='<div class="gsec"><h3>Intensity Techniques</h3><p>Applied on the last set unless the card says "all sets":</p><ul><li><b>Long-length partials:</b> after full reps, continue with half reps in the stretched half.</li><li><b>Myo-reps:</b> after the last set, rest ~5 breaths, then mini-sets of 3-5 reps until you miss.</li><li><b>Dropset:</b> after the last set, drop the weight ~20-30% and rep out again.</li><li><b>Static stretch:</b> hold the loaded stretch position ~30 sec after the last set.</li><li><b>Integrated partials:</b> alternate 1 full-ROM rep with 1 half-ROM stretched-half rep for the whole set.</li><li><b>Slow eccentric:</b> 3-4 second negative on every rep.</li></ul></div>';
   h+='<div class="gsec"><h3>Warm-up</h3><ul><li><b>General:</b> 5-10 min low-intensity cardio (HR 100-135 bpm), 2-3 min foam rolling, then 2 sets each of leg swings, standing glute squeezes, prone trap raises, cable external/internal rotations, overhead shrugs. Keep it under 10-20 min total.</li><li><b>Pyramid (primary exercises only):</b> bar x 15, ~40% x 5, ~50% x 4, ~60% x 3, ~70-75% x 2, then working sets. The warm-up sets column shows suggested count per exercise.</li></ul></div>';
   h+='<div class="gsec"><h3>Progression</h3><ul><li><b>Double progression everywhere:</b> add reps with the same weight until every set hits the top of the range, then add weight and build back up.</li><li><b>Reverse pyramid sets</b> (like "4,6,8") are heaviest first: set 1 is the top set, then drop ~10-15% per set.</li><li><b>Stalled?</b> Beat last time with better tempo, control, or mind-muscle connection. The log is the coach.</li></ul></div>';
-  h+='<div class="gsec"><h3>After Week 10</h3><ul><li>Take a full deload week: same days, half the sets, easy loads.</li><li>Then re-run Block 1 heavier, or repeat the full 10 weeks with a new weak point.</li></ul></div>';
+  h+='<div class="gsec"><h3>Deloads</h3><ul><li>Take a full deload week: same days, half the sets, easy loads.</li><li>Then re-run Block 1 heavier, or repeat the full 10 weeks with a new weak point.</li></ul></div>';
   h+='<div class="gsec"><h3>Key Coaching Points</h3><div class="quote">"How you lift is always more important than how much you lift."</div><div class="quote">"There is no shame in using a lighter load on days where your performance is clearly not at 100 percent."</div><div class="quote">"Avoid failure on primary exercises - it presents a large recovery demand without a significant additional stimulus."</div><div class="quote">"If you\'re getting stronger, you\'re progressing. Log every workout."</div></div>';
   h+='<div class="gsec"><h3>Exercise Substitutions</h3><p>Can\'t perform an exercise (pain, injury, equipment)? Each exercise card in the workout view lists suggested substitutes under "Subs".</p></div>';
   h+='<div class="gsec"><h3>Form Video Index</h3><p class="small">Form demos for every movement (open in YouTube):</p><ul>'+
