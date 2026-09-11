@@ -3733,7 +3733,9 @@ const PROGRAM = [
 </script>
 <script>
 // ===== APP =====
-const LS='forge.swole.v1';
+const LS='swolequest.swole.v1';
+/* one-time key migration: forge.* -> swolequest.* (2026-09-11 rename) */
+try{const _o='forge.swole.v1',_v=localStorage.getItem(_o);if(_v!==null){if(localStorage.getItem(LS)===null)localStorage.setItem(LS,_v);localStorage.removeItem(_o);}}catch(e){}
 let state=load();
 function load(){try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.v===1)return s;}catch(e){}
   return {v:1,pos:0,done:{},draft:{},lastByEx:{},history:[],vars:{},set:{unit:'lb',w10:'10A',rm:{squat:'',bench:'',deadlift:'',ohp:''}}};}
@@ -4126,7 +4128,7 @@ function chartSVG(name){
     '<path d="'+line+'" fill="none" stroke="#c86bff" stroke-width="2.5"/>'+dots+'</svg>';
 }
 
-function R(c,t){return '<a class="ref" href="https://bjepp77.github.io/forge-hub/#university" target="_blank" rel="noopener" title="'+t+' - read the paper at SwoleQuest University">'+c+' &#8599;</a>';}
+function R(c,t){return '<a class="ref" href="https://bjepp77.github.io/swolequest/#university" target="_blank" rel="noopener" title="'+t+' - read the paper at SwoleQuest University">'+c+' &#8599;</a>';}
 // --- GUIDE ---
 function renderGuide(){
   const el=document.getElementById('guideBody');
@@ -4154,7 +4156,7 @@ function renderMore(){
   h+='<div class="quote">Train long-length biased. The stretch position is where the growth is. '+R('LENGTH','Pedrosa 2022 - long-length partials')+'</div>';
   h+='<div class="quote">Intensity techniques are finishers, not foundations - straight sets build the same muscle. '+R('DROP-SETS','Enes 2022 - drop sets/rest-pause vs straight sets')+'</div>';
   h+='<div class="quote">Beat the log and you grow. '+R('OVERLOAD','Plotkin 2022 - load vs rep progression')+'</div></div>';
-  h+='<a class="btn ghost" href="https://bjepp77.github.io/forge-hub/#university" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the research - SwoleQuest University &#8599;</a>';
+  h+='<a class="btn ghost" href="https://bjepp77.github.io/swolequest/#university" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the research - SwoleQuest University &#8599;</a>';
   // settings
   const s=state.set;
   h+='<div class="pagetop" style="padding:18px 0 4px"><h2>Settings</h2></div>';
