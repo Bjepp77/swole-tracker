@@ -3938,7 +3938,7 @@ hb(['CABLE EXTERNAL ROTATION'],'Side-lying external rotation with a water bottle
 function hbwNorm(n){return String(n).toUpperCase().replace(/\s*\(.*?\)/g,'').replace(/\s+/g,' ').trim();}
 function homeBwFor(ex){var i,k,keys=[hbwNorm(ex.n)];if(ex.vars)ex.vars.forEach(function(v){keys.push(hbwNorm(v.label));});for(i=0;i<keys.length;i++){if(HOMEBW[keys[i]])return HOMEBW[keys[i]];}for(i=0;i<keys.length;i++){k=keys[i].replace(/ OR .*/,'');if(HOMEBW[k])return HOMEBW[k];}return null;}
 var RT={sec:0,left:0,at:0,t:null,label:''};
-function parseRest(s){if(!s)return 0;s=String(s);var m;if(/min/i.test(s)){m=s.match(/([\d.]+)/);return m?Math.round(parseFloat(m[1])*60):0;}m=s.match(/([\d.]+)/);return m?Math.round(parseFloat(m[1])):0;}
+function parseRest(s){if(!s)return 0;s=String(s);var n=s.match(/[\d.]+/g);if(!n)return 0;var v=Math.max.apply(null,n.map(parseFloat));return Math.round(/min/i.test(s)?v*60:v);}
 function exAt(xi){try{return weeks()[WO.wi].days[WO.di].ex[xi];}catch(e){return null;}}
 function rtEl(){var el=document.getElementById('restTimer');if(!el){el=document.createElement('div');el.id='restTimer';el.innerHTML='<div id="rtTxt" onclick="rtToggle(event)">REST --:--</div><div class="rtb"><button onclick="rtBump(event,30)">+30</button><button onclick="rtBump(event,-30)">-30</button><button onclick="rtClose(event)">&times;</button></div>';document.body.appendChild(el);}return el;}
 function timerPreset(xi){var ex=exAt(xi);if(!ex)return;var s=parseRest(ex.rest);if(s>0)rtSet(s,ex.n,false);}
