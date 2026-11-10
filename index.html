@@ -4238,5 +4238,8 @@ if(window.__HERO__)document.getElementById('heroImg').style.backgroundImage='url
 renderAll();
 
 </script>
+<script>
+try{if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}});}}catch(e){}
+</script>
 </body>
 </html>
