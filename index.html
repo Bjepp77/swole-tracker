@@ -3751,6 +3751,7 @@ function normalize(s){
   n.set=Object.assign(d.set,o(n.set)?n.set:{});
   n.set.rm=Object.assign(fresh().set.rm,o(n.set.rm)?n.set.rm:{});
   if(n.set.unit!=='kg')n.set.unit='lb';
+  if(!n.set.lu)n.set.lu=n.set.unit;
   n.pos=Math.max(0,parseInt(n.pos)||0);
   return n;
 }
@@ -3786,6 +3787,10 @@ function targetWeight(ex){
 // reads "8-12", "8", and also "8-12 /leg", "8 /leg", "8-10 + 4-6" (first part), "4,6,8" and "5,4,3+" (first to highest)
 function repRange(r){r=String(r).replace(/\s*\/\s*leg\s*$/i,'').replace(/\s*\+\s*\d+-\d+\s*$/,'');let m=r.match(/^(\d+)-(\d+)$/);if(m)return[+m[1],+m[2]];m=r.match(/^(\d+)$/);if(m)return[+m[1],+m[1]];if(/^\d+\+?(\s*,\s*\d+\+?)+$/.test(r)){const a=r.split(',').map(x=>parseInt(x));return[a[0],Math.max(...a)];}return null;}
 function e1rm(w,r){w=parseFloat(w);r=parseFloat(r);if(!w||!r)return 0;return r===1?w:w*(1+r/30);}
+// unit handling: each saved memory entry carries the unit it was logged in (u); older entries have none and are read as state.set.lu
+function asUnit(w,from,to){const n=parseFloat(w);if(!n||from===to)return w;const c=to==='kg'?n*0.45359237:n/0.45359237;const r=Math.round(c*2)/2;return typeof w==='number'?r:String(r);}
+function lastFor(name){const l=state.lastByEx[name];if(!l)return l;const f=l.u||state.set.lu||state.set.unit,t=state.set.unit;if(f===t)return l;return Object.assign({},l,{bestW:asUnit(l.bestW,f,t),sets:l.sets.map(x=>({w:asUnit(x.w,f,t),r:x.r}))});}
+function histW(s,w){return asUnit(w,s.u||state.set.lu||state.set.unit,state.set.unit);}
 function isBodyweightish(n){return /PULL-UP|CHIN-UP|DIP|PUSH-UP/.test(n);}
 
 
@@ -3798,10 +3803,10 @@ function strWrite(name,w,r,unit,src){
   const s=strLoad();const k=strKey(name);if(!k)return;
   const rec={w:parseFloat(w),r:parseFloat(r)||null,date:new Date().toISOString().slice(0,10),unit:unit||'lb',src:src};
   const cur=s.ex[k];
-  if(!cur||rec.w>cur.w||rec.date>cur.date){s.ex[k]=rec;try{localStorage.setItem(SQSTR,JSON.stringify(s));}catch(e){}}
+  if(!cur||rec.w>asUnit(cur.w,cur.unit||'lb',rec.unit)||rec.date>cur.date){s.ex[k]=rec;try{localStorage.setItem(SQSTR,JSON.stringify(s));}catch(e){}}
 }
 function strLookup(name){return strLoad().ex[strKey(name)]||null;}
-function strToLast(name){const r=strLookup(name);return r?{bestW:r.w,allTop:false,sets:[],date:r.date,src:r.src}:null;}
+function strToLast(name){const r=strLookup(name);return r?{bestW:asUnit(r.w,r.unit||'lb',state.set.unit),allTop:false,sets:[],date:r.date,src:r.src}:null;}
 
 // --- progression engine ---
 // Primaries: %1RM fixed by the week (progression is periodized in). Accessories: double progression -
@@ -3813,7 +3818,7 @@ function progressionHint(ex){
     return 'Enter your '+ex.l.toUpperCase()+' 1RM in More > Settings to compute '+ex.p+' loads.';
   }
   const rr=repRange(ex.r);
-  const last=state.lastByEx[ex.n];
+  const last=lastFor(ex.n);
   if(!rr||!last)return null;
   const hi=rr[1];
   const w=last.bestW;
@@ -3825,7 +3830,7 @@ function progressionHint(ex){
   return 'Progression: aim to beat last time - a rep, a little weight, or cleaner technique.';
 }
 function lastLine(ex){
-  const last=state.lastByEx[ex.n];
+  const last=lastFor(ex.n);
   if(!last)return '';
   const s=last.sets.map(x=>(fmtW(x.w)||'BW')+'x'+(x.r||'?')).join('  ·  ');
   return 'Last ('+last.date+'): '+s;
@@ -3836,7 +3841,7 @@ function suggestedLine(ex){
   const t=targetWeight(ex);
   if(t)return 'SUGGESTED TODAY: '+t.label.toUpperCase()+' PER SET';
   if(ex.p&&ex.l)return 'SUGGESTED TODAY: SET YOUR '+ex.l.toUpperCase()+' 1RM IN SETTINGS TO GET LOADS';
-  const own=state.lastByEx[ex.n];const rr=repRange(ex.r);
+  const own=lastFor(ex.n);const rr=repRange(ex.r);
   const sh=own?null:strToLast(ex.n);
   const last=own||sh;
   if(!last||!rr||!last.bestW)return null;
@@ -4046,7 +4051,7 @@ function draftFor(xi){
 // what a blank row shows on screen; the same numbers are saved when the row is edited or ticked done
 function prefillFor(ex,i){
   const t=targetWeight(ex);
-  const last=state.lastByEx[ex.n];
+  const last=lastFor(ex.n);
   if(t&&t.w)return {w:fmtW(t.w),r:(repRange(ex.r)||['',''])[0]};
   if(last&&last.sets[i])return {w:last.sets[i].w,r:last.sets[i].r};
   const rr=repRange(ex.r);return {w:'',r:rr?rr[0]:''};
@@ -4074,15 +4079,15 @@ function completeWorkout(){
         const nums=sets.filter(s=>s.r).map(s=>({w:parseFloat(s.w)||0,r:parseFloat(s.r)||0}));
         const bestW=Math.max(0,...nums.map(s=>s.w));
         const allTop=nums.length>0&&nums.every(s=>s.r>=rr[1]&&s.w>=bestW);
-        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),bestW:bestW||null,allTop};
+        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),u:state.set.unit,bestW:bestW||null,allTop};
       }else{
-        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr()};
+        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),u:state.set.unit};
       }
       const _bw=Math.max(0,...sets.map(x=>parseFloat(x.w)||0));strWrite(ex.n,_bw,null,state.set.unit,'SWOLE');
     }
   });
   if(!exLog.length){toast('Log at least one set first');return;}
-  state.history.unshift({date:todayStr(),ts:Date.now(),week:w.label,day:d.name,tag:d.tag||'',ex:exLog});
+  state.history.unshift({date:todayStr(),ts:Date.now(),u:state.set.unit,week:w.label,day:d.name,tag:d.tag||'',ex:exLog});
   delete state.draft[key];
   const isCurrent=(function(){const it=cur();return it.wi===WO.wi&&it.di===WO.di;})();
   state.done[key]=todayStr();
@@ -4128,7 +4133,7 @@ function renderHistory(){
   h+=chartSVG(CHARTEX)+'</div>';
   h+=state.history.slice(0,30).map((s,i)=>{
     const totalSets=s.ex.reduce((a,e)=>a+e.sets.length,0);
-    const topSet=(function(){let b=null;s.ex.forEach(e=>e.sets.forEach(st=>{const x=e1rm(st.w,st.r);if(x&&(!b||x>b.e))b={e:x,n:e.n,w:st.w,r:st.r};}));return b;})();
+    const topSet=(function(){let b=null;s.ex.forEach(e=>e.sets.forEach(st=>{const x=e1rm(histW(s,st.w),st.r);if(x&&(!b||x>b.e))b={e:x,n:e.n,w:st.w,r:st.r};}));return b;})();
     return '<div class="histitem"><div class="d">'+esc(s.date)+' &middot; '+esc(s.week)+'</div><div class="t">'+esc(s.day)+'</div><div class="small">'+s.ex.length+' exercises &middot; '+totalSets+' sets'+(topSet?' &middot; best e1RM: '+esc(topSet.n)+' '+fmtW(topSet.e)+' '+state.set.unit:'')+'</div></div>';
   }).join('');
   el.innerHTML=h;
@@ -4136,7 +4141,7 @@ function renderHistory(){
 function chartSVG(name){
   const pts=[];
   [...state.history].reverse().forEach(s=>{
-    let best=0;s.ex.forEach(e=>{if(e.n===name)e.sets.forEach(st=>{const x=e1rm(st.w,st.r);if(x>best)best=x;});});
+    let best=0;s.ex.forEach(e=>{if(e.n===name)e.sets.forEach(st=>{const x=e1rm(histW(s,st.w),st.r);if(x>best)best=x;});});
     if(best)pts.push({d:s.date,e:Math.round(best*10)/10});
   });
   if(pts.length<2)return '<p class="small">Log '+esc(name)+' in at least two sessions to see the trend.</p>';
@@ -4196,7 +4201,7 @@ function renderMore(){
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
 }
-function setUnit(u){state.set.unit=u;save();renderAll();}
+function setUnit(u){const o=state.set.unit;if(u!==o)Object.keys(state.draft).forEach(k=>Object.keys(state.draft[k]).forEach(x=>(state.draft[k][x].vals||[]).forEach(v=>{if(v)v.w=asUnit(v.w,o,u);})));state.set.unit=u;save();renderAll();}
 function setW10(v){state.set.w10=v;const s=seq();if(state.pos>=s.length)state.pos=s.length-1;save();renderAll();}
 function setRM(k,v){state.set.rm[k]=v;save();toast(k.toUpperCase()+' 1RM saved');}
 function exportData(){
