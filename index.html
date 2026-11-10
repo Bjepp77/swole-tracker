@@ -3938,7 +3938,7 @@ hb(['CABLE EXTERNAL ROTATION'],'Side-lying external rotation with a water bottle
 function hbwNorm(n){return String(n).toUpperCase().replace(/\s*\(.*?\)/g,'').replace(/\s+/g,' ').trim();}
 function homeBwFor(ex){var i,k,keys=[hbwNorm(ex.n)];if(ex.vars)ex.vars.forEach(function(v){keys.push(hbwNorm(v.label));});for(i=0;i<keys.length;i++){if(HOMEBW[keys[i]])return HOMEBW[keys[i]];}for(i=0;i<keys.length;i++){k=keys[i].replace(/ OR .*/,'');if(HOMEBW[k])return HOMEBW[k];}return null;}
 var RT={sec:0,left:0,at:0,t:null,label:''};
-function parseRest(s){if(!s)return 0;s=String(s);var m;if(/min/i.test(s)){m=s.match(/([\d.]+)/);return m?Math.round(parseFloat(m[1])*60):0;}m=s.match(/([\d.]+)/);return m?Math.round(parseFloat(m[1])):0;}
+function parseRest(s){if(!s)return 0;s=String(s);var n=s.match(/[\d.]+/g);if(!n)return 0;var v=Math.max.apply(null,n.map(parseFloat));return Math.round(/min/i.test(s)?v*60:v);}
 function exAt(xi){try{return weeks()[WO.wi].days[WO.di].ex[xi];}catch(e){return null;}}
 function rtEl(){var el=document.getElementById('restTimer');if(!el){el=document.createElement('div');el.id='restTimer';el.innerHTML='<div id="rtTxt" onclick="rtToggle(event)">REST --:--</div><div class="rtb"><button onclick="rtBump(event,30)">+30</button><button onclick="rtBump(event,-30)">-30</button><button onclick="rtClose(event)">&times;</button></div>';document.body.appendChild(el);}return el;}
 function timerPreset(xi){var ex=exAt(xi);if(!ex)return;var s=parseRest(ex.rest);if(s>0)rtSet(s,ex.n,false);}
@@ -4031,9 +4031,9 @@ function renderWorkout(){
       else{const p=prefillFor(ex,i);pw=p.w;pr=p.r;}
       const done=ed.done&&ed.done[i];
       h+='<tr><td></td><td class="setnum">'+(i+1)+'</td>'+
-        '<td><input inputmode="decimal" value="'+esc(pw==null?'':pw)+'" placeholder="-" onchange="setVal('+xi+','+i+',\'w\',this.value)"></td>'+
-        '<td><input inputmode="decimal" value="'+esc(pr==null?'':pr)+'" placeholder="'+(ex.amrap?'AMRAP':'-')+'" onchange="setVal('+xi+','+i+',\'r\',this.value)"></td>'+
-        '<td><input type="checkbox" class="setdone" '+(done?'checked':'')+' onchange="setDone('+xi+','+i+',this.checked)"></td></tr>';
+        '<td><input aria-label="Set '+(i+1)+' weight" inputmode="decimal" value="'+esc(pw==null?'':pw)+'" placeholder="-" onchange="setVal('+xi+','+i+',\'w\',this.value)"></td>'+
+        '<td><input aria-label="Set '+(i+1)+' reps" inputmode="decimal" value="'+esc(pr==null?'':pr)+'" placeholder="'+(ex.amrap?'AMRAP':'-')+'" onchange="setVal('+xi+','+i+',\'r\',this.value)"></td>'+
+        '<td><input type="checkbox" aria-label="Set '+(i+1)+' done" class="setdone" '+(done?'checked':'')+' onchange="setDone('+xi+','+i+',this.checked)"></td></tr>';
     }
     h+='</table><button class="btn ghost sm" style="margin-top:8px" onclick="addSet('+xi+')">+ Add set</button>';
     h+='</div>';
@@ -4057,7 +4057,7 @@ function prefillFor(ex,i){
   const rr=repRange(ex.r);return {w:'',r:rr?rr[0]:''};
 }
 function seedVal(ed,xi,i){if(ed.vals[i])return;const ex=exAt(xi);const p=ex?prefillFor(ex,i):{w:'',r:''};ed.vals[i]={w:p.w==null?'':String(p.w),r:p.r==null?'':String(p.r)};}
-function setVal(xi,i,f,v){const ed=draftFor(xi);seedVal(ed,xi,i);ed.vals[i][f]=v;save();}
+function setVal(xi,i,f,v){if(f==='w')v=String(v).replace(/^(\s*\d+),(\d{1,2}\s*)$/,'$1.$2');const ed=draftFor(xi);seedVal(ed,xi,i);ed.vals[i][f]=v;save();}
 function setDone(xi,i,c){const ed=draftFor(xi);ed.done[i]=c;if(c)seedVal(ed,xi,i);save();if(c){var _ex=exAt(xi);if(_ex){var _s=parseRest(_ex.rest);if(_s>0)rtSet(_s,_ex.n,true);else rtSet(0,'NO REST - GO!',false);}}}
 function addSet(xi){const ed=draftFor(xi);ed.n=(ed.n||0)+1;save();renderWorkout();}
 function pickVar(n,label){state.vars[n]=label;save();renderWorkout();}
@@ -4129,7 +4129,7 @@ function renderHistory(){
   const main=['BACK SQUAT','BARBELL BENCH PRESS','DEADLIFT','OVERHEAD PRESS'];
   if(!CHARTEX||!names.includes(CHARTEX))CHARTEX=main.find(m=>names.includes(m))||names[0];
   h+='<div class="chartbox"><div class="kicker">Estimated 1RM trend</div>';
-  h+='<div class="field" style="margin:8px 0"><select onchange="CHARTEX=this.value;renderHistory()">'+names.map(n=>'<option '+(n===CHARTEX?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
+  h+='<div class="field" style="margin:8px 0"><select aria-label="Exercise for the chart" onchange="CHARTEX=this.value;renderHistory()">'+names.map(n=>'<option '+(n===CHARTEX?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
   h+=chartSVG(CHARTEX)+'</div>';
   h+=state.history.slice(0,30).map((s,i)=>{
     const totalSets=s.ex.reduce((a,e)=>a+e.sets.length,0);
@@ -4196,7 +4196,7 @@ function renderMore(){
   // backup
   h+='<div class="card"><div class="kicker">Backup &amp; restore</div>';
   h+='<div class="btnrow"><button class="btn ghost" onclick="exportData()">Export data</button><button class="btn ghost" onclick="importData()">Import data</button></div>';
-  h+='<div class="field" style="margin-top:10px"><textarea id="ioBox" rows="4" placeholder="Exported JSON appears here - paste a backup here and tap Import to restore"></textarea></div>';
+  h+='<div class="field" style="margin-top:10px"><textarea id="ioBox" aria-label="Backup text" rows="4" placeholder="Exported JSON appears here - paste a backup here and tap Import to restore"></textarea></div>';
   h+='<div class="divider"></div><button class="btn ghost" style="color:#e08a8d;border-color:#4a2628" onclick="resetAll()">Reset everything</button></div>';
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
@@ -4237,6 +4237,9 @@ document.querySelectorAll('.tabbar button').forEach(b=>b.addEventListener('click
 if(window.__HERO__)document.getElementById('heroImg').style.backgroundImage='url('+window.__HERO__+')';
 renderAll();
 
+</script>
+<script>
+try{if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}});}}catch(e){}
 </script>
 </body>
 </html>
