@@ -4201,7 +4201,7 @@ function renderMore(){
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
 }
-function setUnit(u){const o=state.set.unit;if(u!==o)Object.keys(state.draft).forEach(k=>Object.keys(state.draft[k]).forEach(x=>(state.draft[k][x].vals||[]).forEach(v=>{if(v)v.w=asUnit(v.w,o,u);})));state.set.unit=u;save();renderAll();}
+function setUnit(u){const o=state.set.unit;if(u!==o)Object.keys(state.draft).forEach(k=>Object.keys(state.draft[k]).forEach(x=>(state.draft[k][x].vals||[]).forEach(v=>{if(!v)return;if(v.f&&v.f.u===u&&v.w===v.f.c){v.w=v.f.w;delete v.f;return;}const n=asUnit(v.w,o,u);if(n!==v.w){v.f={w:v.w,u:o,c:n};v.w=n;}else delete v.f;})));state.set.unit=u;save();renderAll();}
 function setW10(v){state.set.w10=v;const s=seq();if(state.pos>=s.length)state.pos=s.length-1;save();renderAll();}
 function setRM(k,v){state.set.rm[k]=v;save();toast(k.toUpperCase()+' 1RM saved');}
 function exportData(){
