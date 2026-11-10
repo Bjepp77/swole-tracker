@@ -3757,7 +3757,7 @@ function normalize(s){
 }
 // a backup is accepted only if it has the pieces this app writes and its day keys belong to this program
 function backupOk(s){
-  if(!s||typeof s!=='object'||s.v!==1||!Array.isArray(s.history)||!s.done||typeof s.done!=='object'||Array.isArray(s.done))return false;
+  if(!s||typeof s!=='object'||(s.app&&s.app!=='swole')||s.v!==1||!Array.isArray(s.history)||!s.done||typeof s.done!=='object'||Array.isArray(s.done))return false;
   const ok=new Set();PROGRAM.forEach(w=>w.days.forEach((d,di)=>ok.add('w'+w.week+'d'+di)));
   return Object.keys(s.done).concat(s.draft&&typeof s.draft==='object'?Object.keys(s.draft):[]).every(k=>ok.has(k)||/^mig-/.test(k));
 }
@@ -4205,7 +4205,7 @@ function setUnit(u){const o=state.set.unit;if(u!==o)Object.keys(state.draft).for
 function setW10(v){state.set.w10=v;const s=seq();if(state.pos>=s.length)state.pos=s.length-1;save();renderAll();}
 function setRM(k,v){state.set.rm[k]=v;save();toast(k.toUpperCase()+' 1RM saved');}
 function exportData(){
-  const j=JSON.stringify(state);
+  const j=JSON.stringify(Object.assign({app:'swole'},state));
   const box=document.getElementById('ioBox');if(box)box.value=j;
   try{const b=new Blob([j],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='swole-backup.json';a.click();}catch(e){}
   toast('Backup exported');
