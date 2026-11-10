@@ -4057,7 +4057,7 @@ function prefillFor(ex,i){
   const rr=repRange(ex.r);return {w:'',r:rr?rr[0]:''};
 }
 function seedVal(ed,xi,i){if(ed.vals[i])return;const ex=exAt(xi);const p=ex?prefillFor(ex,i):{w:'',r:''};ed.vals[i]={w:p.w==null?'':String(p.w),r:p.r==null?'':String(p.r)};}
-function setVal(xi,i,f,v){if(f==='w'||f==='r')v=String(v).replace(/^(\s*\d+),(\d{1,2}\s*)$/,'$1.$2');const ed=draftFor(xi);seedVal(ed,xi,i);ed.vals[i][f]=v;save();}
+function setVal(xi,i,f,v){if(f==='w')v=String(v).replace(/^(\s*\d+),(\d{1,2}\s*)$/,'$1.$2');const ed=draftFor(xi);seedVal(ed,xi,i);ed.vals[i][f]=v;save();}
 function setDone(xi,i,c){const ed=draftFor(xi);ed.done[i]=c;if(c)seedVal(ed,xi,i);save();if(c){var _ex=exAt(xi);if(_ex){var _s=parseRest(_ex.rest);if(_s>0)rtSet(_s,_ex.n,true);else rtSet(0,'NO REST - GO!',false);}}}
 function addSet(xi){const ed=draftFor(xi);ed.n=(ed.n||0)+1;save();renderWorkout();}
 function pickVar(n,label){state.vars[n]=label;save();renderWorkout();}
