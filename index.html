@@ -3737,9 +3737,30 @@ const LS='swolequest.swole.v1';
 /* one-time key migration: forge.* -> swolequest.* (2026-09-11 rename) */
 try{const _o='forge.swole.v1',_v=localStorage.getItem(_o);if(_v!==null){if(localStorage.getItem(LS)===null)localStorage.setItem(LS,_v);localStorage.removeItem(_o);}}catch(e){}
 let state=load();
-function load(){try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.v===1)return s;}catch(e){}
-  return {v:1,pos:0,done:{},draft:{},lastByEx:{},history:[],vars:{},set:{unit:'lb',w10:'10A',rm:{squat:'',bench:'',deadlift:'',ohp:''}}};}
-function save(){localStorage.setItem(LS,JSON.stringify(state));}
+function fresh(){return {v:1,pos:0,done:{},draft:{},lastByEx:{},history:[],vars:{},set:{unit:'lb',w10:'10A',rm:{squat:'',bench:'',deadlift:'',ohp:''}}};}
+function load(){try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.v===1)return normalize(s);}catch(e){}
+  return fresh();}
+function save(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){try{toast('Could not save - storage is full or blocked');}catch(_){}}}
+// fill anything missing from a saved or imported state with defaults, so a thin file cannot break the app
+function normalize(s){
+  const o=x=>x&&typeof x==='object'&&!Array.isArray(x);
+  const d=fresh(),n=Object.assign(fresh(),s);
+  ['done','draft','lastByEx','vars'].forEach(k=>{if(!o(n[k]))n[k]=d[k];});
+  n.history=Array.isArray(n.history)?n.history.filter(h=>h&&Array.isArray(h.ex)&&h.ex.every(e=>e&&Array.isArray(e.sets))):d.history;
+  Object.keys(n.lastByEx).forEach(k=>{const l=n.lastByEx[k];if(!l||!Array.isArray(l.sets))delete n.lastByEx[k];});
+  n.set=Object.assign(d.set,o(n.set)?n.set:{});
+  n.set.rm=Object.assign(fresh().set.rm,o(n.set.rm)?n.set.rm:{});
+  if(n.set.unit!=='kg')n.set.unit='lb';
+  if(!n.set.lu)n.set.lu=n.set.unit;
+  n.pos=Math.max(0,parseInt(n.pos)||0);
+  return n;
+}
+// a backup is accepted only if it has the pieces this app writes and its day keys belong to this program
+function backupOk(s){
+  if(!s||typeof s!=='object'||(s.app&&s.app!=='swole')||s.v!==1||!Array.isArray(s.history)||!s.done||typeof s.done!=='object'||Array.isArray(s.done))return false;
+  const ok=new Set();PROGRAM.forEach(w=>w.days.forEach((d,di)=>ok.add('w'+w.week+'d'+di)));
+  return Object.keys(s.done).concat(s.draft&&typeof s.draft==='object'?Object.keys(s.draft):[]).every(k=>ok.has(k)||/^mig-/.test(k));
+}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2400);}
 
@@ -3763,8 +3784,13 @@ function targetWeight(ex){
   const wlo=rnd(rm*lo/100),whi=rnd(rm*hi/100);
   return lo===hi?{w:wlo,label:fmtW(wlo)+' '+state.set.unit}:{w:wlo,whi,label:fmtW(wlo)+'-'+fmtW(whi)+' '+state.set.unit};
 }
-function repRange(r){let m=String(r).match(/^(\d+)-(\d+)$/);if(m)return[+m[1],+m[2]];m=String(r).match(/^(\d+)$/);if(m)return[+m[1],+m[1]];return null;}
+// reads "8-12", "8", and also "8-12 /leg", "8 /leg", "8-10 + 4-6" (first part), "4,6,8" and "5,4,3+" (first to highest)
+function repRange(r){r=String(r).replace(/\s*\/\s*leg\s*$/i,'').replace(/\s*\+\s*\d+-\d+\s*$/,'');let m=r.match(/^(\d+)-(\d+)$/);if(m)return[+m[1],+m[2]];m=r.match(/^(\d+)$/);if(m)return[+m[1],+m[1]];if(/^\d+\+?(\s*,\s*\d+\+?)+$/.test(r)){const a=r.split(',').map(x=>parseInt(x));return[a[0],Math.max(...a)];}return null;}
 function e1rm(w,r){w=parseFloat(w);r=parseFloat(r);if(!w||!r)return 0;return r===1?w:w*(1+r/30);}
+// unit handling: each saved memory entry carries the unit it was logged in (u); older entries have none and are read as state.set.lu
+function asUnit(w,from,to){const n=parseFloat(w);if(!n||from===to)return w;const c=to==='kg'?n*0.45359237:n/0.45359237;const r=Math.round(c*2)/2;return typeof w==='number'?r:String(r);}
+function lastFor(name){const l=state.lastByEx[name];if(!l)return l;const f=l.u||state.set.lu||state.set.unit,t=state.set.unit;if(f===t)return l;return Object.assign({},l,{bestW:asUnit(l.bestW,f,t),sets:l.sets.map(x=>({w:asUnit(x.w,f,t),r:x.r}))});}
+function histW(s,w){return asUnit(w,s.u||state.set.lu||state.set.unit,state.set.unit);}
 function isBodyweightish(n){return /PULL-UP|CHIN-UP|DIP|PUSH-UP/.test(n);}
 
 
@@ -3775,12 +3801,12 @@ function strKey(n){return String(n).toUpperCase().replace(/\([^)]*\)/g,'').repla
 function strWrite(name,w,r,unit,src){
   if(!(parseFloat(w)>0))return;
   const s=strLoad();const k=strKey(name);if(!k)return;
-  const rec={w:parseFloat(w),r:parseFloat(r)||null,date:new Date().toISOString().slice(0,10),unit:unit||'lb',src:src};
+  const rec={w:parseFloat(w),r:parseFloat(r)||null,date:(d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'))(new Date()),unit:unit||'lb',src:src};
   const cur=s.ex[k];
-  if(!cur||rec.w>cur.w||rec.date>cur.date){s.ex[k]=rec;try{localStorage.setItem(SQSTR,JSON.stringify(s));}catch(e){}}
+  if(!cur||rec.w>asUnit(cur.w,cur.unit||'lb',rec.unit)||rec.date>cur.date){s.ex[k]=rec;try{localStorage.setItem(SQSTR,JSON.stringify(s));}catch(e){}}
 }
 function strLookup(name){return strLoad().ex[strKey(name)]||null;}
-function strToLast(name){const r=strLookup(name);return r?{bestW:r.w,allTop:false,sets:[],date:r.date,src:r.src}:null;}
+function strToLast(name){const r=strLookup(name);return r?{bestW:asUnit(r.w,r.unit||'lb',state.set.unit),allTop:false,sets:[],date:r.date,src:r.src}:null;}
 
 // --- progression engine ---
 // Primaries: %1RM fixed by the week (progression is periodized in). Accessories: double progression -
@@ -3792,7 +3818,7 @@ function progressionHint(ex){
     return 'Enter your '+ex.l.toUpperCase()+' 1RM in More > Settings to compute '+ex.p+' loads.';
   }
   const rr=repRange(ex.r);
-  const last=state.lastByEx[ex.n];
+  const last=lastFor(ex.n);
   if(!rr||!last)return null;
   const hi=rr[1];
   const w=last.bestW;
@@ -3804,7 +3830,7 @@ function progressionHint(ex){
   return 'Progression: aim to beat last time - a rep, a little weight, or cleaner technique.';
 }
 function lastLine(ex){
-  const last=state.lastByEx[ex.n];
+  const last=lastFor(ex.n);
   if(!last)return '';
   const s=last.sets.map(x=>(fmtW(x.w)||'BW')+'x'+(x.r||'?')).join('  ·  ');
   return 'Last ('+last.date+'): '+s;
@@ -3815,7 +3841,7 @@ function suggestedLine(ex){
   const t=targetWeight(ex);
   if(t)return 'SUGGESTED TODAY: '+t.label.toUpperCase()+' PER SET';
   if(ex.p&&ex.l)return 'SUGGESTED TODAY: SET YOUR '+ex.l.toUpperCase()+' 1RM IN SETTINGS TO GET LOADS';
-  const own=state.lastByEx[ex.n];const rr=repRange(ex.r);
+  const own=lastFor(ex.n);const rr=repRange(ex.r);
   const sh=own?null:strToLast(ex.n);
   const last=own||sh;
   if(!last||!rr||!last.bestW)return null;
@@ -3923,7 +3949,7 @@ function rtTick(){RT.left=Math.max(0,RT.sec-(Date.now()-RT.at)/1000);rtPaint();i
 function rtBeep(){try{var C=window.AudioContext||window.webkitAudioContext;var c=new C();var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.setValueAtTime(.2,c.currentTime);o.start();o.stop(c.currentTime+.35);}catch(e){}}
 function rtPaint(){var t=document.getElementById('rtTxt');if(!t)return;if(RT.sec<=0){t.innerHTML='<span class="rtex">'+RT.label+'</span>';return;}var l=Math.ceil(RT.left),m=Math.floor(l/60),s=l%60;t.innerHTML=(RT.label?'<span class="rtex">'+RT.label+'</span>':'')+'REST '+m+':'+(s<10?'0':'')+s;}
 function rtToggle(e){e.stopPropagation();if(RT.sec<=0)return;if(RT.t){RT.left=Math.max(0,RT.sec-(Date.now()-RT.at)/1000);RT.sec=RT.left;rtStop();rtPaint();}else{RT.sec=RT.left;rtStart();}}
-function rtBump(e,n){e.stopPropagation();if(RT.t){RT.sec=Math.max(0,RT.sec+n);RT.at=Date.now();}else{RT.sec=Math.max(0,RT.sec+n);RT.left=RT.sec;}rtPaint();}
+function rtBump(e,n){e.stopPropagation();if(RT.t){RT.left=Math.max(0,RT.sec-(Date.now()-RT.at)/1000);RT.sec=Math.max(0,RT.left+n);RT.at=Date.now();RT.left=RT.sec;}else{RT.left=Math.max(0,RT.left+n);RT.sec=RT.left;}rtPaint();}
 function rtClose(e){e.stopPropagation();rtStop();var el=document.getElementById('restTimer');if(el)el.classList.remove('show');el.classList.remove('done');}
 /* === END ALTERNATES + TIMER === */
 
@@ -4002,12 +4028,7 @@ function renderWorkout(){
       const val=(ed.vals&&ed.vals[i])||null;
       let pw='',pr='';
       if(val){pw=val.w;pr=val.r;}
-      else{
-        const last=state.lastByEx[ex.n];
-        if(t&&t.w){pw=fmtW(t.w);pr=(repRange(ex.r)||['',''])[0];}
-        else if(last&&last.sets[i]){pw=last.sets[i].w;pr=last.sets[i].r;}
-        else{const rr=repRange(ex.r);pr=rr?rr[0]:'';}
-      }
+      else{const p=prefillFor(ex,i);pw=p.w;pr=p.r;}
       const done=ed.done&&ed.done[i];
       h+='<tr><td></td><td class="setnum">'+(i+1)+'</td>'+
         '<td><input inputmode="decimal" value="'+esc(pw==null?'':pw)+'" placeholder="-" onchange="setVal('+xi+','+i+',\'w\',this.value)"></td>'+
@@ -4027,8 +4048,17 @@ function draftFor(xi){
   if(!state.draft[key][xi])state.draft[key][xi]={vals:[],done:[],n:weeks()[WO.wi].days[WO.di].ex[xi].s};
   return state.draft[key][xi];
 }
-function setVal(xi,i,f,v){const ed=draftFor(xi);if(!ed.vals[i])ed.vals[i]={w:'',r:''};ed.vals[i][f]=v;save();}
-function setDone(xi,i,c){const ed=draftFor(xi);ed.done[i]=c;save();if(c){var _ex=exAt(xi);if(_ex){var _s=parseRest(_ex.rest);if(_s>0)rtSet(_s,_ex.n,true);else rtSet(0,'NO REST - GO!',false);}}}
+// what a blank row shows on screen; the same numbers are saved when the row is edited or ticked done
+function prefillFor(ex,i){
+  const t=targetWeight(ex);
+  const last=lastFor(ex.n);
+  if(t&&t.w)return {w:fmtW(t.w),r:(repRange(ex.r)||['',''])[0]};
+  if(last&&last.sets[i])return {w:last.sets[i].w,r:last.sets[i].r};
+  const rr=repRange(ex.r);return {w:'',r:rr?rr[0]:''};
+}
+function seedVal(ed,xi,i){if(ed.vals[i])return;const ex=exAt(xi);const p=ex?prefillFor(ex,i):{w:'',r:''};ed.vals[i]={w:p.w==null?'':String(p.w),r:p.r==null?'':String(p.r)};}
+function setVal(xi,i,f,v){const ed=draftFor(xi);seedVal(ed,xi,i);ed.vals[i][f]=v;save();}
+function setDone(xi,i,c){const ed=draftFor(xi);ed.done[i]=c;if(c)seedVal(ed,xi,i);save();if(c){var _ex=exAt(xi);if(_ex){var _s=parseRest(_ex.rest);if(_s>0)rtSet(_s,_ex.n,true);else rtSet(0,'NO REST - GO!',false);}}}
 function addSet(xi){const ed=draftFor(xi);ed.n=(ed.n||0)+1;save();renderWorkout();}
 function pickVar(n,label){state.vars[n]=label;save();renderWorkout();}
 function completeWorkout(){
@@ -4049,15 +4079,15 @@ function completeWorkout(){
         const nums=sets.filter(s=>s.r).map(s=>({w:parseFloat(s.w)||0,r:parseFloat(s.r)||0}));
         const bestW=Math.max(0,...nums.map(s=>s.w));
         const allTop=nums.length>0&&nums.every(s=>s.r>=rr[1]&&s.w>=bestW);
-        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),bestW:bestW||null,allTop};
+        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),u:state.set.unit,bestW:bestW||null,allTop};
       }else{
-        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr()};
+        state.lastByEx[ex.n]={sets:sets.map(s=>({w:s.w,r:s.r})),date:todayStr(),u:state.set.unit};
       }
       const _bw=Math.max(0,...sets.map(x=>parseFloat(x.w)||0));strWrite(ex.n,_bw,null,state.set.unit,'SWOLE');
     }
   });
   if(!exLog.length){toast('Log at least one set first');return;}
-  state.history.unshift({date:todayStr(),ts:Date.now(),week:w.label,day:d.name,tag:d.tag||'',ex:exLog});
+  state.history.unshift({date:todayStr(),ts:Date.now(),u:state.set.unit,week:w.label,day:d.name,tag:d.tag||'',ex:exLog});
   delete state.draft[key];
   const isCurrent=(function(){const it=cur();return it.wi===WO.wi&&it.di===WO.di;})();
   state.done[key]=todayStr();
@@ -4103,7 +4133,7 @@ function renderHistory(){
   h+=chartSVG(CHARTEX)+'</div>';
   h+=state.history.slice(0,30).map((s,i)=>{
     const totalSets=s.ex.reduce((a,e)=>a+e.sets.length,0);
-    const topSet=(function(){let b=null;s.ex.forEach(e=>e.sets.forEach(st=>{const x=e1rm(st.w,st.r);if(x&&(!b||x>b.e))b={e:x,n:e.n,w:st.w,r:st.r};}));return b;})();
+    const topSet=(function(){let b=null;s.ex.forEach(e=>e.sets.forEach(st=>{const x=e1rm(histW(s,st.w),st.r);if(x&&(!b||x>b.e))b={e:x,n:e.n,w:st.w,r:st.r};}));return b;})();
     return '<div class="histitem"><div class="d">'+esc(s.date)+' &middot; '+esc(s.week)+'</div><div class="t">'+esc(s.day)+'</div><div class="small">'+s.ex.length+' exercises &middot; '+totalSets+' sets'+(topSet?' &middot; best e1RM: '+esc(topSet.n)+' '+fmtW(topSet.e)+' '+state.set.unit:'')+'</div></div>';
   }).join('');
   el.innerHTML=h;
@@ -4111,7 +4141,7 @@ function renderHistory(){
 function chartSVG(name){
   const pts=[];
   [...state.history].reverse().forEach(s=>{
-    let best=0;s.ex.forEach(e=>{if(e.n===name)e.sets.forEach(st=>{const x=e1rm(st.w,st.r);if(x>best)best=x;});});
+    let best=0;s.ex.forEach(e=>{if(e.n===name)e.sets.forEach(st=>{const x=e1rm(histW(s,st.w),st.r);if(x>best)best=x;});});
     if(best)pts.push({d:s.date,e:Math.round(best*10)/10});
   });
   if(pts.length<2)return '<p class="small">Log '+esc(name)+' in at least two sessions to see the trend.</p>';
@@ -4128,7 +4158,7 @@ function chartSVG(name){
     '<path d="'+line+'" fill="none" stroke="#c86bff" stroke-width="2.5"/>'+dots+'</svg>';
 }
 
-function R(c,t){return '<a class="ref" href="https://bjepp77.github.io/swolequest/#university" target="_blank" rel="noopener" title="'+t+' - read the paper at SwoleQuest University">'+c+' &#8599;</a>';}
+function R(c,t){return '<a class="ref" href="../swolequest/#university" target="_blank" rel="noopener" title="'+t+' - read the paper at SwoleQuest University">'+c+' &#8599;</a>';}
 // --- GUIDE ---
 function renderGuide(){
   const el=document.getElementById('guideBody');
@@ -4156,7 +4186,7 @@ function renderMore(){
   h+='<div class="quote">Train long-length biased. The stretch position is where the growth is. '+R('LENGTH','Pedrosa 2022 - long-length partials')+'</div>';
   h+='<div class="quote">Intensity techniques are finishers, not foundations - straight sets build the same muscle. '+R('DROP-SETS','Enes 2022 - drop sets/rest-pause vs straight sets')+'</div>';
   h+='<div class="quote">Beat the log and you grow. '+R('OVERLOAD','Plotkin 2022 - load vs rep progression')+'</div></div>';
-  h+='<a class="btn ghost" href="https://bjepp77.github.io/swolequest/#university" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the research - SwoleQuest University &#8599;</a>';
+  h+='<a class="btn ghost" href="../swolequest/#university" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">Read the research - SwoleQuest University &#8599;</a>';
   // settings
   const s=state.set;
   h+='<div class="pagetop" style="padding:18px 0 4px"><h2>Settings</h2></div>';
@@ -4171,18 +4201,23 @@ function renderMore(){
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
 }
-function setUnit(u){state.set.unit=u;save();renderAll();}
+function setUnit(u){const o=state.set.unit;if(u!==o)Object.keys(state.draft).forEach(k=>Object.keys(state.draft[k]).forEach(x=>(state.draft[k][x].vals||[]).forEach(v=>{if(!v)return;if(v.f&&v.f.u===u&&v.w===v.f.c){v.w=v.f.w;delete v.f;return;}const n=asUnit(v.w,o,u);if(n!==v.w){v.f={w:v.w,u:o,c:n};v.w=n;}else delete v.f;})));state.set.unit=u;save();renderAll();}
 function setW10(v){state.set.w10=v;const s=seq();if(state.pos>=s.length)state.pos=s.length-1;save();renderAll();}
 function setRM(k,v){state.set.rm[k]=v;save();toast(k.toUpperCase()+' 1RM saved');}
 function exportData(){
-  const j=JSON.stringify(state);
+  const j=JSON.stringify(Object.assign({app:'swole'},state));
   const box=document.getElementById('ioBox');if(box)box.value=j;
   try{const b=new Blob([j],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='swole-backup.json';a.click();}catch(e){}
   toast('Backup exported');
 }
 function importData(){
   const box=document.getElementById('ioBox');if(!box||!box.value.trim()){toast('Paste a backup into the box first');return;}
-  try{const s=JSON.parse(box.value);if(!s||s.v!==1)throw 0;state=s;save();renderAll();toast('Backup restored');}catch(e){toast('That backup did not parse');}
+  let s;try{s=JSON.parse(box.value);}catch(e){toast('That backup did not parse');return;}
+  if(!backupOk(s)){toast('That is not a backup from this app - nothing changed');return;}
+  if(!confirm('Replace everything on this device with this backup?'))return;
+  const prev=state;state=normalize(s);
+  try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){state=prev;toast('Could not save that backup - your data is unchanged');return;}
+  renderAll();toast('Backup restored');
 }
 function resetAll(){if(confirm('Delete all logs, settings and progress on this device?')){localStorage.removeItem(LS);state=load();save();renderAll();showView('today');toast('Fresh start');}}
 
