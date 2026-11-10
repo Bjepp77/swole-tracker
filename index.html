@@ -3783,7 +3783,8 @@ function targetWeight(ex){
   const wlo=rnd(rm*lo/100),whi=rnd(rm*hi/100);
   return lo===hi?{w:wlo,label:fmtW(wlo)+' '+state.set.unit}:{w:wlo,whi,label:fmtW(wlo)+'-'+fmtW(whi)+' '+state.set.unit};
 }
-function repRange(r){let m=String(r).match(/^(\d+)-(\d+)$/);if(m)return[+m[1],+m[2]];m=String(r).match(/^(\d+)$/);if(m)return[+m[1],+m[1]];return null;}
+// reads "8-12", "8", and also "8-12 /leg", "8 /leg", "8-10 + 4-6" (first part), "4,6,8" and "5,4,3+" (first to highest)
+function repRange(r){r=String(r).replace(/\s*\/\s*leg\s*$/i,'').replace(/\s*\+\s*\d+-\d+\s*$/,'');let m=r.match(/^(\d+)-(\d+)$/);if(m)return[+m[1],+m[2]];m=r.match(/^(\d+)$/);if(m)return[+m[1],+m[1]];if(/^\d+\+?(\s*,\s*\d+\+?)+$/.test(r)){const a=r.split(',').map(x=>parseInt(x));return[a[0],Math.max(...a)];}return null;}
 function e1rm(w,r){w=parseFloat(w);r=parseFloat(r);if(!w||!r)return 0;return r===1?w:w*(1+r/30);}
 function isBodyweightish(n){return /PULL-UP|CHIN-UP|DIP|PUSH-UP/.test(n);}
 
