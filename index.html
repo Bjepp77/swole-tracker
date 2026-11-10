@@ -3737,9 +3737,29 @@ const LS='swolequest.swole.v1';
 /* one-time key migration: forge.* -> swolequest.* (2026-09-11 rename) */
 try{const _o='forge.swole.v1',_v=localStorage.getItem(_o);if(_v!==null){if(localStorage.getItem(LS)===null)localStorage.setItem(LS,_v);localStorage.removeItem(_o);}}catch(e){}
 let state=load();
-function load(){try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.v===1)return s;}catch(e){}
-  return {v:1,pos:0,done:{},draft:{},lastByEx:{},history:[],vars:{},set:{unit:'lb',w10:'10A',rm:{squat:'',bench:'',deadlift:'',ohp:''}}};}
-function save(){localStorage.setItem(LS,JSON.stringify(state));}
+function fresh(){return {v:1,pos:0,done:{},draft:{},lastByEx:{},history:[],vars:{},set:{unit:'lb',w10:'10A',rm:{squat:'',bench:'',deadlift:'',ohp:''}}};}
+function load(){try{const s=JSON.parse(localStorage.getItem(LS));if(s&&s.v===1)return normalize(s);}catch(e){}
+  return fresh();}
+function save(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){try{toast('Could not save - storage is full or blocked');}catch(_){}}}
+// fill anything missing from a saved or imported state with defaults, so a thin file cannot break the app
+function normalize(s){
+  const o=x=>x&&typeof x==='object'&&!Array.isArray(x);
+  const d=fresh(),n=Object.assign(fresh(),s);
+  ['done','draft','lastByEx','vars'].forEach(k=>{if(!o(n[k]))n[k]=d[k];});
+  n.history=Array.isArray(n.history)?n.history.filter(h=>h&&Array.isArray(h.ex)&&h.ex.every(e=>e&&Array.isArray(e.sets))):d.history;
+  Object.keys(n.lastByEx).forEach(k=>{const l=n.lastByEx[k];if(!l||!Array.isArray(l.sets))delete n.lastByEx[k];});
+  n.set=Object.assign(d.set,o(n.set)?n.set:{});
+  n.set.rm=Object.assign(fresh().set.rm,o(n.set.rm)?n.set.rm:{});
+  if(n.set.unit!=='kg')n.set.unit='lb';
+  n.pos=Math.max(0,parseInt(n.pos)||0);
+  return n;
+}
+// a backup is accepted only if it has the pieces this app writes and its day keys belong to this program
+function backupOk(s){
+  if(!s||typeof s!=='object'||s.v!==1||!Array.isArray(s.history)||!s.done||typeof s.done!=='object'||Array.isArray(s.done))return false;
+  const ok=new Set();PROGRAM.forEach(w=>w.days.forEach((d,di)=>ok.add('w'+w.week+'d'+di)));
+  return Object.keys(s.done).concat(s.draft&&typeof s.draft==='object'?Object.keys(s.draft):[]).every(k=>ok.has(k)||/^mig-/.test(k));
+}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2400);}
 
@@ -4186,7 +4206,12 @@ function exportData(){
 }
 function importData(){
   const box=document.getElementById('ioBox');if(!box||!box.value.trim()){toast('Paste a backup into the box first');return;}
-  try{const s=JSON.parse(box.value);if(!s||s.v!==1)throw 0;state=s;save();renderAll();toast('Backup restored');}catch(e){toast('That backup did not parse');}
+  let s;try{s=JSON.parse(box.value);}catch(e){toast('That backup did not parse');return;}
+  if(!backupOk(s)){toast('That is not a backup from this app - nothing changed');return;}
+  if(!confirm('Replace everything on this device with this backup?'))return;
+  const prev=state;state=normalize(s);
+  try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){state=prev;toast('Could not save that backup - your data is unchanged');return;}
+  renderAll();toast('Backup restored');
 }
 function resetAll(){if(confirm('Delete all logs, settings and progress on this device?')){localStorage.removeItem(LS);state=load();save();renderAll();showView('today');toast('Fresh start');}}
 
