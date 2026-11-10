@@ -4031,9 +4031,9 @@ function renderWorkout(){
       else{const p=prefillFor(ex,i);pw=p.w;pr=p.r;}
       const done=ed.done&&ed.done[i];
       h+='<tr><td></td><td class="setnum">'+(i+1)+'</td>'+
-        '<td><input inputmode="decimal" value="'+esc(pw==null?'':pw)+'" placeholder="-" onchange="setVal('+xi+','+i+',\'w\',this.value)"></td>'+
-        '<td><input inputmode="decimal" value="'+esc(pr==null?'':pr)+'" placeholder="'+(ex.amrap?'AMRAP':'-')+'" onchange="setVal('+xi+','+i+',\'r\',this.value)"></td>'+
-        '<td><input type="checkbox" class="setdone" '+(done?'checked':'')+' onchange="setDone('+xi+','+i+',this.checked)"></td></tr>';
+        '<td><input aria-label="Set '+(i+1)+' weight" inputmode="decimal" value="'+esc(pw==null?'':pw)+'" placeholder="-" onchange="setVal('+xi+','+i+',\'w\',this.value)"></td>'+
+        '<td><input aria-label="Set '+(i+1)+' reps" inputmode="decimal" value="'+esc(pr==null?'':pr)+'" placeholder="'+(ex.amrap?'AMRAP':'-')+'" onchange="setVal('+xi+','+i+',\'r\',this.value)"></td>'+
+        '<td><input type="checkbox" aria-label="Set '+(i+1)+' done" class="setdone" '+(done?'checked':'')+' onchange="setDone('+xi+','+i+',this.checked)"></td></tr>';
     }
     h+='</table><button class="btn ghost sm" style="margin-top:8px" onclick="addSet('+xi+')">+ Add set</button>';
     h+='</div>';
@@ -4129,7 +4129,7 @@ function renderHistory(){
   const main=['BACK SQUAT','BARBELL BENCH PRESS','DEADLIFT','OVERHEAD PRESS'];
   if(!CHARTEX||!names.includes(CHARTEX))CHARTEX=main.find(m=>names.includes(m))||names[0];
   h+='<div class="chartbox"><div class="kicker">Estimated 1RM trend</div>';
-  h+='<div class="field" style="margin:8px 0"><select onchange="CHARTEX=this.value;renderHistory()">'+names.map(n=>'<option '+(n===CHARTEX?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
+  h+='<div class="field" style="margin:8px 0"><select aria-label="Exercise for the chart" onchange="CHARTEX=this.value;renderHistory()">'+names.map(n=>'<option '+(n===CHARTEX?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
   h+=chartSVG(CHARTEX)+'</div>';
   h+=state.history.slice(0,30).map((s,i)=>{
     const totalSets=s.ex.reduce((a,e)=>a+e.sets.length,0);
@@ -4196,7 +4196,7 @@ function renderMore(){
   // backup
   h+='<div class="card"><div class="kicker">Backup &amp; restore</div>';
   h+='<div class="btnrow"><button class="btn ghost" onclick="exportData()">Export data</button><button class="btn ghost" onclick="importData()">Import data</button></div>';
-  h+='<div class="field" style="margin-top:10px"><textarea id="ioBox" rows="4" placeholder="Exported JSON appears here - paste a backup here and tap Import to restore"></textarea></div>';
+  h+='<div class="field" style="margin-top:10px"><textarea id="ioBox" aria-label="Backup text" rows="4" placeholder="Exported JSON appears here - paste a backup here and tap Import to restore"></textarea></div>';
   h+='<div class="divider"></div><button class="btn ghost" style="color:#e08a8d;border-color:#4a2628" onclick="resetAll()">Reset everything</button></div>';
   h+='<p class="small" style="text-align:center;margin-top:14px">All data lives on this device (localStorage). Works offline.</p>';
   el.innerHTML=h;
